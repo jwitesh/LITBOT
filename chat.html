@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LITBOT - AI Book Chat</title>
+  
+  <!-- Tailwind + Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          animation: {
+            'typing': 'typing 2s steps(40, end)',
+            'blink': 'blink 1s infinite',
+            'bounce-slow': 'bounce 2s infinite',
+          },
+          keyframes: {
+            typing: {
+              '0%': { width: '0%' },
+              '100%': { width: '100%' }
+            },
+            blink: {
+              '0%, 50%': { borderColor: 'transparent' },
+              '51%, 100%': { borderColor: 'currentColor' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    * { font-family: 'Inter', sans-serif; }
+    
+    body {
+      background: linear-gradient(180deg, #0f172a 0%, #1e293b 70%, #334155 100%);
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    .glass { 
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .chat-bubble {
+      max-width: 80%;
+      animation: slideIn 0.3s ease-out;
+    }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .typing-indicator span {
+      background: linear-gradient(90deg, #6366f1, #8b5cf6);
+      border-radius: 50%;
+      height: 8px;
+      width: 8px;
+      margin: 0 2px;
+      display: inline-block;
+      animation: bounce-slow 1.4s infinite ease-in-out both;
+    }
+    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+    
+    .book-card {
+      background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2));
+      border: 1px solid rgba(99,102,241,0.3);
+    }
+  </style>
+</head>
+
+<body class="flex flex-col h-screen">
+  
+  <!-- 📱 Mobile Header -->
+  <div class="md:hidden bg-gradient-to-r from-slate-800 to-slate-900 p-4 flex items-center gap-3 shadow-2xl">
+    <a href="index.html" class="p-2 hover:bg-white/10 rounded-xl transition-all">
+      <i class="fas fa-arrow-left text-xl"></i>
+    </a>
+    <div class="flex-1 text-center">
+      <div class="font-bold text-lg">LITBOT AI</div>
+      <div class="text-xs text-blue-400 font-medium">Online</div>
+    </div>
+  </div>
+
+  <!-- 💬 Chat Header (Desktop) -->
+  <div class="hidden md:flex items-center justify-between px-8 py-6 bg-gradient-to-r from-slate-800/50 to-slate-900/50 glass border-b border-white/10">
+    <div class="flex items-center gap-4">
+      <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-2xl">
+        <i class="fas fa-book text-2xl"></i>
+      </div>
+      <div>
+        <div class="font-bold text-xl">LITBOT Assistant</div>
+        <div class="text-sm text-green-400 flex items-center gap-1">
+          <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+          Online • Llama 3.3 70B
+        </div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 text-sm">
+      <button onclick="clearChat()" class="p-2 hover:bg-white/10 rounded-xl transition-all">
+        <i class="fas fa-trash"></i>
+      </button>
+      <button onclick="toggleHistory()" class="p-2 hover:bg-white/10 rounded-xl transition-all">
+        <i class="fas fa-history"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- 📱 Chat Messages -->
+  <div id="chatContainer" class="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900">
+    
+    <!-- 🎉 Welcome Message -->
+    <div class="max-w-2xl mx-auto">
+      <div class="flex gap-4 items-start">
+        <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">
+          <i class="fas fa-robot text-xl"></i>
+        </div>
+        <div class="flex-1 chat-bubble bg-slate-800/50 glass p-6 rounded-3xl border-l-4 border-green-500">
+          <div class="font-semibold text-green-400 mb-2 flex items-center gap-2">
+            <i class="fas fa-magic"></i>
+            Welcome to LITBOT!
+          </div>
+          <p class="text-gray-300 leading-relaxed">
+            Describe any story, plot, or character → I'll find the <strong>exact book</strong> instantly! 
+            Powered by Groq + Llama 3.3 70B.
+          </p>
+          <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3 pt-4 border-t border-white/10">
+            <button onclick="quickMessage('boy who lived under stairs')" class="group p-3 rounded-xl bg-white/5 hover:bg-blue-500/20 border border-white/10 transition-all hover:scale-105">
+              <div class="text-lg mb-1">🧙‍♂️</div>
+              <div class="text-xs font-medium group-hover:text-blue-400">Harry Potter</div>
+            </button>
+            <button onclick="quickMessage('girl on fire archery dystopia')" class="group p-3 rounded-xl bg-white/5 hover:bg-orange-500/20 border border-white/10 transition-all hover:scale-105">
+              <div class="text-lg mb-1">🏹</div>
+              <div class="text-xs font-medium group-hover:text-orange-400">Hunger Games</div>
+            </button>
+            <button onclick="quickMessage('ice and fire dragons throne')" class="group p-3 rounded-xl bg-white/5 hover:bg-red-500/20 border border-white/10 transition-all hover:scale-105">
+              <div class="text-lg mb-1">🐉</div>
+              <div class="text-xs font-medium group-hover:text-red-400">Game of Thrones</div>
+            </button>
+            <button onclick="quickMessage('maze runners escape')" class="group p-3 rounded-xl bg-white/5 hover:bg-purple-500/20 border border-white/10 transition-all hover:scale-105">
+              <div class="text-lg mb-1">🏃</div>
+              <div class="text-xs font-medium group-hover:text-purple-400">Maze Runner</div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ⌨️ Input Area -->
+  <div class="p-6 md:p-8 bg-gradient-to-t from-slate-900 to-transparent glass border-t border-white/10">
+    <div class="max-w-4xl mx-auto flex items-end gap-4">
+      <div class="flex-1 relative">
+        <input 
+          id="messageInput" 
+          type="text" 
+          placeholder="Describe the story... (e.g., 'boy who lived under stairs')" 
+          class="w-full p-4 md:p-5 bg-white/5 glass border border-white/20 rounded-3xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all text-lg placeholder-gray-500 resize-none"
+          onkeypress="handleKeyPress(event)"
+        >
+        <div id="charCount" class="absolute bottom-3 right-4 text-xs text-gray-500">0/500</div>
+      </div>
+      <button 
+        id="sendBtn" 
+        onclick="sendMessage()" 
+        class="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 rounded-3xl flex items-center justify-center shadow-2xl hover:shadow-blue-500/25 hover:scale-110 transition-all duration-300 group"
+      >
+        <i class="fas fa-paper-plane text-xl group-hover:rotate-12"></i>
+      </button>
+    </div>
+    <div class="text-xs text-gray-500 mt-2 text-center">
+      Press Enter to send • Powered by Groq AI
+    </div>
+  </div>
+
+  <script>
+    let isLoading = false;
+    let currentUserId = "webUser_" + Date.now();
+
+    // 🧠 Enhanced message adding
+    function addMessage(text, isUser = false, isBook = false) {
+      const container = document.getElementById('chatContainer');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `max-w-2xl mx-auto flex ${isUser ? 'justify-end' : 'justify-start'} gap-4 items-start py-4`;
+      
+      if (isUser) {
+        messageDiv.innerHTML = `
+          <div class="chat-bubble bg-gradient-to-r from-blue-500 to-purple-500 text-white p-5 rounded-3xl rounded-br-lg shadow-xl">
+            <div class="whitespace-pre-wrap leading-relaxed">${text}</div>
+          </div>
+          <div class="w-10 h-10 bg-blue-500/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-2">
+            <i class="fas fa-user text-lg"></i>
+          </div>
+        `;
+      } else {
+        if (isBook) {
+          messageDiv.innerHTML = `
+            <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">
+              <i class="fas fa-book text-xl"></i>
+            </div>
+            <div class="chat-bubble glass p-6 rounded-3xl border-l-4 border-emerald-500 book-card hover:shadow-2xl hover:shadow-emerald-500/25 transition-all">
+              <div class="font-bold text-2xl mb-4 flex items-center gap-3 text-emerald-400">
+                <i class="fas fa-check-circle"></i>
+                Book Found!
+              </div>
+              <div class="prose prose-invert max-w-none leading-relaxed text-lg">${text}</div>
+            </div>
+          `;
+        } else {
+          messageDiv.innerHTML = `
+            <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">
+              <i class="fas fa-robot text-xl"></i>
+            </div>
+            <div class="chat-bubble glass p-6 rounded-3xl border-l-4 border-green-500">
+              <div class="whitespace-pre-wrap leading-relaxed">${text}</div>
+            </div>
+          `;
+        }
+      }
+      
+      container.appendChild(messageDiv);
+      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+    }
+
+    // 💬 Send message
+    async function sendMessage() {
+      if (isLoading) return;
+      
+      const input = document.getElementById('messageInput');
+      const message = input.value.trim();
+      if (!message) return;
+
+      // Add user message
+      addMessage(message, true);
+      input.value = '';
+      updateCharCount();
+
+      // Show typing
+      showTyping();
+      isLoading = true;
+      document.getElementById('sendBtn').style.opacity = '0.5';
+      document.getElementById('sendBtn').onclick = null;
+
+      try {
+        const response = await fetch('http://localhost:5000/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, userId: currentUserId })
+        });
+
+        if (!response.ok) throw new Error('Server error');
+
+        const data = await response.json();
+        
+        // Remove typing indicator
+        document.querySelector('.typing-container')?.remove();
+        
+        // Detect book response and style it
+        const reply = data.reply || 'No response';
+        addMessage(reply, false, reply.includes('📖'));
+        
+      } catch (error) {
+        document.querySelector('.typing-container')?.remove();
+        addMessage('❌ Connection error. Server might be down. <br><br>Check: <code>http://localhost:5000</code>', false);
+        console.error('Chat error:', error);
+      } finally {
+        isLoading = false;
+        document.getElementById('sendBtn').style.opacity = '1';
+        document.getElementById('sendBtn').onclick = () => sendMessage();
+      }
+    }
+
+    // ⌨️ Typing indicator
+    function showTyping() {
+      const container = document.getElementById('chatContainer');
+      const typingDiv = document.createElement('div');
+      typingDiv.className = 'max-w-2xl mx-auto flex justify-start gap-4 items-start py-4 typing-container';
+      typingDiv.innerHTML = `
+        <div class="w-10 h-10 bg-gradient-to-r from-blue-500/30 to-purple-500/30 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">
+          <i class="fas fa-robot text-xl"></i>
+        </div>
+        <div class="glass p-6 rounded-3xl border-l-4 border-blue-500 flex items-center gap-3">
+          <div class="typing-indicator">
+            <span></span><span></span><span></span>
+          </div>
+          <span class="text-sm text-gray-400">LITBOT is thinking...</span>
+        </div>
+      `;
+      container.appendChild(typingDiv);
+      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+    }
+
+    // 🎯 Quick messages
+    function quickMessage(text) {
+      document.getElementById('messageInput').value = text;
+      sendMessage();
+    }
+
+    // ⌨️ Enter key
+    function handleKeyPress(event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    }
+
+    // 📏 Character counter
+    document.getElementById('messageInput').addEventListener('input', function() {
+      updateCharCount();
+    });
+
+    function updateCharCount() {
+      const input = document.getElementById('messageInput');
+      const count = input.value.length;
+      document.getElementById('charCount').textContent = `${count}/500`;
+      if (count > 450) {
+        document.getElementById('charCount').classList.add('text-red-400');
+      } else {
+        document.getElementById('charCount').classList.remove('text-red-400');
+      }
+    }
+
+    // 🗑️ Clear chat
+    function clearChat() {
+      if (confirm('Clear all messages?')) {
+        document.getElementById('chatContainer').innerHTML = `
+          <div class="max-w-2xl mx-auto">
+            <div class="flex gap-4 items-start">
+              <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">
+                <i class="fas fa-robot text-xl"></i>
+              </div>
+              <div class="flex-1 chat-bubble glass p-6 rounded-3xl border-l-4 border-green-500">
+                <div class="font-semibold text-green-400 mb-2 flex items-center gap-2">
+                  <i class="fas fa-magic"></i>
+                  Chat cleared! Ready for new stories.
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // 📜 History toggle (placeholder)
+    function toggleHistory() {
+      addMessage('📜 History feature coming soon! All chats are saved per user.', false);
+    }
+
+    // 🎨 Scrollbar styling
+    const style = document.createElement('style');
+    style.textContent = `
+      .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+      .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+      .scrollbar-thin::-webkit-scrollbar-thumb { 
+        background: rgba(255,255,255,0.2); 
+        border-radius: 3px; 
+      }
+      .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>
