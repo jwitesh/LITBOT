@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LITBOT - Book Recommendations</title>
+  
+  <!-- Tailwind + Fonts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          animation: {
+            'card-float': 'cardFloat 6s ease-in-out infinite',
+            'gradient': 'gradient 3s ease infinite',
+          },
+          keyframes: {
+            cardFloat: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-10px)' }
+            },
+            gradient: {
+              '0%': { backgroundPosition: '0% 50%' },
+              '50%': { backgroundPosition: '100% 50%' },
+              '100%': { backgroundPosition: '0% 50%' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+      min-height: 100vh;
+    }
+    .glass {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradient 4s ease infinite;
+    }
+    .book-card {
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .book-card:hover {
+      transform: translateY(-12px) scale(1.02);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+    .rating-stars {
+      display: flex;
+      gap: 0.25rem;
+    }
+    .rating-stars .filled { color: #fbbf24; }
+    .rating-stars .empty { color: #64748b; }
+    .active-genre { 
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important; 
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.4) !important;
+      transform: scale(1.05);
+    }
+    .book-description {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  </style>
+</head>
+
+<body class="pt-20 pb-12">
+  
+  <!-- 🏠 Top Navigation -->
+  <nav class="fixed top-0 left-0 right-0 z-50 px-6 py-4 glass backdrop-blur-xl border-b border-white/10">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-3 group">
+        <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-all">
+          <i class="fas fa-book text-xl"></i>
+        </div>
+        <span class="font-bold text-xl gradient-text">LITBOT</span>
+      </a>
+      
+      <div class="flex items-center gap-4">
+        <a href="chat.html" class="p-2 hover:bg-white/10 rounded-xl transition-all">
+          <i class="fas fa-comments text-xl"></i>
+        </a>
+        <button onclick="toggleTheme()" class="p-2 hover:bg-white/10 rounded-xl transition-all">
+          <i class="fas fa-moon text-xl"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 🎯 Hero Section -->
+  <section class="px-6 md:px-12 lg:px-24 py-20 text-center">
+    <div class="max-w-4xl mx-auto glass p-12 rounded-3xl border border-white/10 shadow-2xl">
+      <div class="mb-8">
+        <h1 class="text-5xl md:text-6xl lg:text-7xl font-black mb-6 leading-tight">
+          <span class="text-white block">AI-Powered</span>
+          <span class="gradient-text block">Book Discovery</span>
+        </h1>
+        <p class="text-xl md:text-2xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
+          Get personalized recommendations by genre, mood, or story. 
+          Powered by cutting-edge AI.
+        </p>
+      </div>
+      
+      <!-- 🔍 AI Search Bar -->
+      <div class="max-w-2xl mx-auto">
+        <div class="relative">
+          <div class="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500">
+            <i class="fas fa-magic text-2xl"></i>
+          </div>
+          <input 
+            id="aiSearch" 
+            type="text" 
+            placeholder="Tell me a story or mood... (e.g., 'epic fantasy dragons')" 
+            class="w-full pl-16 pr-12 py-6 text-xl bg-white/5 glass border-2 border-white/20 rounded-3xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all placeholder-gray-500"
+            onkeypress="handleAISearch(event)"
+          >
+          <button onclick="aiRecommend()" class="absolute right-3 top-1/2 -translate-y-1/2 p-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 rounded-2xl shadow-lg hover:shadow-blue-500/25 transition-all group">
+            <i class="fas fa-sparkles text-xl group-hover:rotate-12"></i>
+          </button>
+        </div>
+        <div class="text-sm text-gray-500 mt-3 flex items-center justify-center gap-2">
+          <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+          AI Live • Groq + Llama 3.3
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 🎛️ Filters - 11 Zones (Added Trending, RomCom, Horror Comedy) -->
+  <section class="px-6 md:px-12 lg:px-24 mb-12">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex flex-wrap gap-3 justify-center mb-8">
+        <button class="genre-btn px-6 py-3 bg-white/10 hover:bg-blue-500/20 border border-white/20 rounded-2xl backdrop-blur-sm transition-all font-medium active-genre" data-genre="all">
+          <i class="fas fa-th-large mr-2"></i>All Genres
+        </button>
+        <button class="genre-btn px-6 py-3 bg-white/10 hover:bg-orange-500/20 border border-white/20 rounded-2xl backdrop-blur-sm transition-all font-medium" data-genre="trending">
+          <i class="fas fa-fire mr-2"></i>Trending
+        </button>
+        <button class="genre-btn px-6 py-3 bg-white/10 hover:bg-purple-500/20 border border-white/20 rounded-2xl backdrop-blur-sm transition-all font-medium" data-genre="fantasy">
+          <i class="fas fa-dragon mr-2"></i>Fantasy
+        </button>
+        <button class="genre-btn px-6 py-3 bg-white/10 hover:bg-emerald-500/20 border border-white/20 rounded-2xl backdrop-blur-sm transition-all font-medium" data-genre="mystery">
+          <i class="fas fa-magnifying-glass mr-2"></i>Mystery
+        </button>
+        <button class="genre-btn px-6 py-3 bg-white/10 hover:bg-pink-500/20 border border-white/20 rounded-2xl backdrop-blur-sm transition-all font-medium" data-genre="romcom">
+          <i class="fas fa-laugh mr-2"></i>RomCom
+        </button>
+        <button class="genre-btn px-6 py-3 bg-white/10 hover:bg-pink-500/20 border border-white/20 rounded-2xl backdrop-blur-sm transition-all font-medium" data-genre="romance">
+          <i class="fas fa-heart mr-2"></i>Romance
+        </button>
+        <button class="genre-btn px-6 py-3 bg-white/10 hover:bg-orange-500/20 border border-white/20 rounded-2xl backdrop-blur-sm transition-all font-medium" data-genre="scifi">
+          <i class="fas fa-rocket mr-2"></i>Sci-Fi
+        </button>
+        <button class="genre-btn px-6 py-3 bg-white/10 hover:bg-indigo-500/20 border border-white/20 rounded-2xl backdrop-blur-sm transition-all font-medium" data-genre="thriller">
+          <i class="fas fa-skull-crossbones mr-2"></i>Thriller
+        </button>
+        <button class="genre-btn px-6 py-3 bg-white/10 hover:bg-amber-500/20 border border-white/20 rounded-2xl backdrop-blur-sm transition-all font-medium" data-genre="historical">
+          <i class="fas fa-scroll mr-2"></i>Historical
+        </button>
+        <button class="genre-btn px-6 py-3 bg-white/10 hover:bg-teal-500/20 border border-white/20 rounded-2xl backdrop-blur-sm transition-all font-medium" data-genre="horrorcomedy">
+          <i class="fas fa-ghost mr-2"></i>Horror Comedy
+        </button>
+        <button class="genre-btn px-6 py-3 bg-white/10 hover:bg-red-500/20 border border-white/20 rounded-2xl backdrop-blur-sm transition-all font-medium" data-genre="horror">
+          <i class="fas fa-skull mr-2"></i>Horror
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 📚 Book Grid -->
+  <section class="px-6 md:px-12 lg:px-24">
+    <div class="max-w-7xl mx-auto">
+      <!-- Loading State -->
+      <div id="loadingState" class="text-center py-20 hidden">
+        <div class="inline-flex items-center gap-3 px-8 py-4 bg-white/10 backdrop-blur-sm rounded-3xl mb-6">
+          <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <span class="font-medium">AI is finding perfect books...</span>
+        </div>
+      </div>
+
+      <!-- Results Grid -->
+      <div id="bookGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        <!-- Dynamic book cards will appear here -->
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // 📚 Expanded Books Database (Added Trending, RomCom, Horror Comedy - 66 books total)
+    const booksDatabase = {
+      all: [
+        { title: 'The Name of the Wind', author: 'Patrick Rothfuss', rating: 4.7, genre: 'fantasy', description: 'A gifted young man with a passion for knowledge enrolls at a magical university, where he uncovers secrets that threaten his life and the world around him.' },
+        { title: 'Dune', author: 'Frank Herbert', rating: 4.5, genre: 'scifi', description: 'Paul Atreides, heir to House Atreides, is thrust into a brutal interstellar war when his family is betrayed and forced to flee to the desert planet Arrakis.' },
+        { title: 'The Silent Patient', author: 'Alex Michaelides', rating: 4.3, genre: 'mystery', description: 'A famous painter who stops speaking after shooting her husband becomes the obsession of a psychotherapist determined to uncover her motive.' },
+        { title: 'It Ends With Us', author: 'Colleen Hoover', rating: 4.2, genre: 'romance', description: 'A young woman falls in love with a neurosurgeon who reminds her of her abusive father, forcing her to confront painful memories from her past.' },
+        { title: 'Fourth Wing', author: 'Rebecca Yarros', rating: 4.8, genre: 'fantasy', description: 'Violet Sorrengail is forced into elite dragon rider training despite her fragile health, where she must survive deadly competition and forbidden romance.' },
+        { title: 'The Women', author: 'Kristin Hannah', rating: 4.6, genre: 'historical', description: 'Follows Frances "Frankie" McGrath, a young woman from California who joins the Army Nurse Corps during the Vietnam War and faces unimaginable challenges.' }
+      ],
+      trending: [
+        { title: 'Fourth Wing', author: 'Rebecca Yarros', rating: 4.8, genre: 'fantasy', description: 'Violet Sorrengail must survive dragon rider training, deadly competition, and forbidden romance in this explosive fantasy romance.' },
+        { title: 'Iron Flame', author: 'Rebecca Yarros', rating: 4.7, genre: 'fantasy', description: 'Violet faces new challenges as war brews and secrets unravel in the gripping sequel to Fourth Wing.' },
+        { title: 'The Women', author: 'Kristin Hannah', rating: 4.6, genre: 'historical', description: 'A young nurse serves in Vietnam and returns home to fight for recognition of women who served.' },
+        { title: 'A Court of Thorns and Roses', author: 'Sarah J. Maas', rating: 4.5, genre: 'fantasy', description: 'Feyre, a huntress, kills a faerie wolf and is taken to a magical realm where she must survive deadly trials.' },
+        { title: 'It Ends With Us', author: 'Colleen Hoover', rating: 4.2, genre: 'romance', description: 'A story of love, heartbreak, and breaking cycles of abuse that has taken TikTok by storm.' },
+        { title: 'The Silent Patient', author: 'Alex Michaelides', rating: 4.3, genre: 'mystery', description: 'The psychological thriller everyone is talking about - a woman stops speaking after shooting her husband.' }
+      ],
+      fantasy: [
+        { title: 'The Name of the Wind', author: 'Patrick Rothfuss', rating: 4.7, genre: 'fantasy', description: 'Kvothe recounts his legendary tale from street urchin to world-famous wizard and musician in this epic fantasy masterpiece.' },
+        { title: 'The Hobbit', author: 'J.R.R. Tolkien', rating: 4.6, genre: 'fantasy', description: "Bilbo Baggins' unexpected journey with dwarves and Gandalf to reclaim a mountain from a dragon." },
+        { title: 'Mistborn', author: 'Brandon Sanderson', rating: 4.7, genre: 'fantasy', description: 'A young thief with rare magical abilities joins a rebellion to overthrow a tyrannical immortal emperor.' },
+        { title: 'The Lies of Locke Lamora', author: 'Scott Lynch', rating: 4.6, genre: 'fantasy', description: 'Gentleman bastard Locke Lamora and his crew of thieves pull off impossible heists in a city ruled by noblemen.' },
+        { title: 'The Night Circus', author: 'Erin Morgenstern', rating: 4.5, genre: 'fantasy', description: 'Two young illusionists compete in a magical circus that appears without warning, falling in love amidst deadly competition.' },
+        { title: 'American Gods', author: 'Neil Gaiman', rating: 4.4, genre: 'fantasy', description: 'Ex-con Shadow Moon becomes bodyguard to Mr. Wednesday as old gods battle new gods across America.' }
+      ],
+      mystery: [
+        { title: 'The Silent Patient', author: 'Alex Michaelides', rating: 4.3, genre: 'mystery', description: 'Alicia Berenson, a famous painter, shoots her husband and then stops speaking completely, baffling everyone.' },
+        { title: 'The Girl with the Dragon Tattoo', author: 'Stieg Larsson', rating: 4.2, genre: 'mystery', description: 'Journalist Mikael Blomkvist teams up with hacker Lisbeth Salander to solve a decades-old disappearance.' },
+        { title: 'Gone Girl', author: 'Gillian Flynn', rating: 4.1, genre: 'mystery', description: 'When Amy Dunne disappears on her fifth wedding anniversary, her husband Nick becomes the prime suspect.' },
+        { title: 'The Murder of Roger Ackroyd', author: 'Agatha Christie', rating: 4.5, genre: 'mystery', description: 'Hercule Poirot investigates a wealthy man\'s murder in what many consider Christie\'s greatest mystery.' },
+        { title: 'The Cuckoo\'s Calling', author: 'Robert Galbraith', rating: 4.0, genre: 'mystery', description: 'Private detective Cormoran Strike investigates the supposed suicide of a top model.' },
+        { title: 'The No. 1 Ladies\' Detective Agency', author: 'Alexander McCall Smith', rating: 4.2, genre: 'mystery', description: 'Precious Ramotswe solves everyday mysteries in her native Botswana with wisdom and common sense.' }
+      ],
+      romcom: [
+        { title: 'Beach Read', author: 'Emily Henry', rating: 4.1, genre: 'romcom', description: 'Rival authors January and Augustus make a bet to swap genres and end up falling in love while writing.' },
+        { title: 'The Love Hypothesis', author: 'Ali Hazelwood', rating: 4.2, genre: 'romcom', description: 'STEM PhD student Olive fakes a relationship with professor Adam Carlsen to convince her friend she\'s moved on.' },
+        { title: 'Funny Story', author: 'Emily Henry', rating: 4.3, genre: 'romcom', description: 'Daphne and Miles, dumped by their partners who are now dating each other, fake a relationship and find real love.' },
+        { title: 'The Happy Ever After Playlist', author: 'Abbi Glines', rating: 4.0, genre: 'romcom', description: 'Country music star Whiskey Lambert returns home and reconnects with his first love in this sweet romance.' },
+        { title: 'Ten Rules for Faking It', author: 'Sophie Sullivan', rating: 4.1, genre: 'romcom', description: 'Shy engineer Drew makes a list of rules to survive her company auction, falling for the auctioneer.' },
+        { title: 'The Road Trip', author: 'Beth O\'Leary', rating: 4.2, genre: 'romcom', description: 'Exes Addie and Dylan get stuck on a road trip together with friends, leading to hilarious and heartfelt moments.' }
+      ],
+      romance: [
+        { title: 'Pride and Prejudice', author: 'Jane Austen', rating: 4.4, genre: 'romance', description: 'Elizabeth Bennet and Mr. Darcy\'s enemies-to-lovers journey through pride, prejudice, and eventual true love.' },
+        { title: 'The Notebook', author: 'Nicholas Sparks', rating: 4.3, genre: 'romance', description: 'Allie and Noah\'s passionate summer romance faces class differences and years apart before reuniting.' },
+        { title: 'Me Before You', author: 'Jojo Moyes', rating: 4.4, genre: 'romance', description: 'Caregiver Louisa Clark forms an unexpected bond with quadriplegic Will Traynor, changing both their lives.' },
+        { title: 'It Ends With Us', author: 'Colleen Hoover', rating: 4.2, genre: 'romance', description: 'Lily Bloom falls for neurosurgeon Ryle Kincaid while confronting painful memories of her past.' },
+        { title: 'The Kiss Quotient', author: 'Helen Hoang', rating: 4.3, genre: 'romance', description: 'Stella Lane, who struggles with social skills, hires escort Michael Phan to teach her how to be a better lover.' },
+        { title: 'Beach Read', author: 'Emily Henry', rating: 4.1, genre: 'romance', description: 'Two writers with opposite styles swap genres for the summer and discover unexpected chemistry.' }
+      ],
+      scifi: [
+        { title: 'Dune', author: 'Frank Herbert', rating: 4.5, genre: 'scifi', description: 'Paul Atreides battles rival houses for control of the most valuable resource in the universe on desert planet Arrakis.' },
+        { title: '1984', author: 'George Orwell', rating: 4.6, genre: 'scifi', description: 'Winston Smith rebels against Big Brother\'s totalitarian regime in a dystopian future where privacy is dead.' },
+        { title: 'The Martian', author: 'Andy Weir', rating: 4.4, genre: 'scifi', description: 'Astronaut Mark Watney is stranded alone on Mars and must use science and ingenuity to survive.' },
+        { title: 'Foundation', author: 'Isaac Asimov', rating: 4.3, genre: 'scifi', description: 'Psychohistorian Hari Seldon predicts the fall of the Galactic Empire and creates a Foundation to shorten the coming dark age.' },
+        { title: 'Neuromancer', author: 'William Gibson', rating: 4.2, genre: 'scifi', description: 'Case, a washed-up hacker, is hired for one last job in the neon-lit underworld of cyberspace.' },
+        { title: 'Project Hail Mary', author: 'Andy Weir', rating: 4.6, genre: 'scifi', description: 'Ryland Grace wakes up alone on a spaceship with amnesia, tasked with saving Earth from solar dimming.' }
+      ],
+      thriller: [
+        { title: 'The Girl on the Train', author: 'Paula Hawkins', rating: 4.0, genre: 'thriller', description: 'Rachel, an alcoholic divorcee, becomes obsessed with a couple she watches from her train and gets entangled in a missing person case.' },
+        { title: 'Gone Girl', author: 'Gillian Flynn', rating: 4.1, genre: 'thriller', description: 'Nick Dunne\'s wife Amy vanishes on their fifth anniversary, and evidence mounts against him in this twisted tale.' },
+        { title: 'The Da Vinci Code', author: 'Dan Brown', rating: 4.0, genre: 'thriller', description: 'Harvard symbologist Robert Langdon races across Europe to solve a murder and uncover secrets threatening Christianity.' },
+        { title: 'The Firm', author: 'John Grisham', rating: 4.2, genre: 'thriller', description: 'Top law school grad Mitch McDeere discovers his prestigious firm is a front for the mob.' },
+        { title: 'Shutter Island', author: 'Dennis Lehane', rating: 4.3, genre: 'thriller', description: 'U.S. Marshal Teddy Daniels investigates a disappearance from a remote asylum for the criminally insane.' },
+        { title: 'The Bourne Identity', author: 'Robert Ludlum', rating: 4.1, genre: 'thriller', description: 'Amnesiac assassin Jason Bourne pieces together his identity while hunted by his former employers.' }
+      ],
+      historical: [
+        { title: 'The Historian', author: 'Elizabeth Kostova', rating: 4.2, genre: 'historical', description: 'A young woman discovers her father\'s research on Vlad the Impaler, leading to a centuries-spanning Dracula hunt.' },
+        { title: 'All the Light We Cannot See', author: 'Anthony Doerr', rating: 4.5, genre: 'historical', description: 'A blind French girl and German boy whose paths collide in occupied Saint-Malo during World War II.' },
+        { title: 'The Book Thief', author: 'Markus Zusak', rating: 4.6, genre: 'historical', description: 'Liesel Meminger steals books and learns to read in Nazi Germany, narrated by Death himself.' },
+        { title: 'Pachinko', author: 'Min Jin Lee', rating: 4.4, genre: 'historical', description: 'Four generations of a poor Korean family struggle to survive in Japan during Japanese occupation.' },
+        { title: 'The Nightingale', author: 'Kristin Hannah', rating: 4.5, genre: 'historical', description: 'Two French sisters take radically different approaches to survive German-occupied France during WWII.' },
+        { title: 'Outlander', author: 'Diana Gabaldon', rating: 4.3, genre: 'historical', description: 'WWII nurse Claire Randall time travels to 1743 Scotland, falling in love with warrior Jamie Fraser.' }
+      ],
+      horrorcomedy: [
+        { title: 'Good Omens', author: 'Neil Gaiman & Terry Pratchett', rating: 4.4, genre: 'horrorcomedy', description: 'Angel Aziraphale and demon Crowley team up to prevent the apocalypse in this hilarious end-of-the-world tale.' },
+        { title: 'The Southern Book Club\'s Guide to Slaying Vampires', author: 'Grady Hendrix', rating: 4.2, genre: 'horrorcomedy', description: 'Southern housewives battle a charming vampire infiltrating their book club in this bloody hilarious horror.' },
+        { title: 'My Best Friend\'s Exorcism', author: 'Grady Hendrix', rating: 4.1, genre: 'horrorcomedy', description: 'Best friends Gretchen and Abby face demonic possession, 80s nostalgia, and unbreakable friendship.' },
+        { title: 'Horrorstör', author: 'Grady Hendrix', rating: 4.0, genre: 'horrorcomedy', description: 'IKEA-like store employees discover their workplace is haunted after closing time.' },
+        { title: 'John Dies at the End', author: 'David Wong', rating: 4.1, genre: 'horrorcomedy', description: 'Two friends battle interdimensional monsters after consuming a mind-altering drug called Soy Sauce.' },
+        { title: 'The Final Girl Support Group', author: 'Grady Hendrix', rating: 4.3, genre: 'horrorcomedy', description: 'Surviving final girls from horror movies meet regularly until someone starts killing them off.' }
+      ],
+      horror: [
+        { title: 'The Shining', author: 'Stephen King', rating: 4.4, genre: 'horror', description: 'Jack Torrance takes his family to the isolated Overlook Hotel where malevolent forces begin to possess him.' },
+        { title: 'It', author: 'Stephen King', rating: 4.3, genre: 'horror', description: 'Seven outcast kids known as the Losers Club battle Pennywise, a shape-shifting entity that preys on children.' },
+        { title: 'Dracula', author: 'Bram Stoker', rating: 4.2, genre: 'horror', description: 'Count Dracula travels from Transylvania to England to spread the undead curse, pursued by Van Helsing.' },
+        { title: 'Frankenstein', author: 'Mary Shelley', rating: 4.1, genre: 'horror', description: 'Victor Frankenstein creates a creature from dead body parts, which turns against its creator.' },
+        { title: 'The Haunting of Hill House', author: 'Shirley Jackson', rating: 4.3, genre: 'horror', description: 'Four seekers converge on an infamous haunted house to face their darkest fears.' },
+        { title: 'Mexican Gothic', author: 'Silvia Moreno-Garcia', rating: 4.2, genre: 'horror', description: 'Noemí Taboada travels to High Place, a distant mountaintop mansion, to rescue her cousin.' }
+      ]
+    };
+
+    // 🧙‍♂️ Genre Icons
+    function getGenreIcon(genre) {
+      const icons = {
+        fantasy: '🧙‍♂️', scifi: '🚀', mystery: '🔍', romance: '💕', romcom: '😂💕',
+        thriller: '🗡️', historical: '📜', horror: '👻', horrorcomedy: '💀😂', trending: '🔥',
+        book: '📚'
+      };
+      return icons[genre] || '📚';
+    }
+
+    // ⭐ Rating Stars
+    function generateStars(rating) {
+      let stars = '';
+      for (let i = 1; i <= 5; i++) {
+        stars += i <= Math.floor(rating) 
+          ? '<i class="fas fa-star filled"></i>'
+          : (rating >= i - 0.5 ? '<i class="fas fa-star-half-alt filled"></i>' : '<i class="far fa-star empty"></i>');
+      }
+      return stars;
+    }
+
+    // 📱 Render 6 Books for Selected Genre
+    function renderBooks(genre) {
+      const books = booksDatabase[genre] || [];
+      const grid = document.getElementById('bookGrid');
+      grid.innerHTML = '';
+
+      if (books.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full text-center py-20">
+            <div class="text-6xl mb-6">📚</div>
+            <h3 class="text-2xl font-bold mb-4">No books in this zone yet</h3>
+          </div>
+        `;
+        return;
+      }
+
+      books.slice(0, 6).forEach((book, index) => {
+        const card = document.createElement('div');
+        card.className = 'book-card glass p-8 rounded-3xl border border-white/10 hover:border-blue-500/50 cursor-pointer group';
+        card.style.animationDelay = `${index * 0.1}s`;
+        
+        card.innerHTML = `
+          <div class="mb-6 h-80 flex flex-col">
+            <div class="text-4xl mb-4">${getGenreIcon(book.genre)}</div>
+            <h3 class="font-black text-2xl mb-3 group-hover:text-blue-400 transition-all leading-tight">${book.title}</h3>
+            <p class="text-gray-400 mb-4">${book.author}</p>
+            <p class="book-description text-gray-400 text-sm leading-relaxed flex-1">${book.description}</p>
+            <div class="flex items-center justify-between mt-auto pt-4">
+              <div class="rating-stars text-lg">${generateStars(book.rating)}</div>
+            </div>
+          </div>
+       
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // 🎛️ Genre Filter Event Listeners
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('.genre-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          // Remove active class from all buttons
+          document.querySelectorAll('.genre-btn').forEach(b => {
+            b.classList.remove('active-genre');
+          });
+          // Add active class to clicked button
+          this.classList.add('active-genre');
+          
+          const genre = this.dataset.genre;
+          renderBooks(genre);
+        });
+      });
+
+      // Show "All Genres" by default
+      renderBooks('all');
+    });
+
+    // 🎯 AI Recommendation (unchanged)
+    async function aiRecommend() {
+      const input = document.getElementById('aiSearch');
+      const query = input.value.trim();
+      if (!query) return;
+
+      document.getElementById('loadingState').classList.remove('hidden');
+      document.getElementById('bookGrid').innerHTML = '';
+
+      try {
+        const response = await fetch('http://localhost:5000/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            message: `Recommend 6 books for: "${query}". Give titles, authors, ratings, detailed descriptions. Format as JSON list.`,
+            userId: 'recommendations'
+          })
+        });
+
+        const data = await response.json();
+        // Parse AI response here if backend returns structured data
+        renderBooks('all'); // Fallback to all books
+
+      } catch (error) {
+        console.log('Using local books (backend offline)');
+        renderBooks('all'); // Show all books as fallback
+      } finally {
+        document.getElementById('loadingState').classList.add('hidden');
+      }
+    }
+
+    // ⌨️ Enter key for AI search
+    function handleAISearch(event) {
+      if (event.key === 'Enter') aiRecommend();
+    }
+
+    // 🌙 Theme toggle
+    function toggleTheme() {
+      document.body.classList.toggle('dark-theme');
+    }
+
+    // Initialize focus
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('aiSearch').focus();
+    });
+  </script>
+</body>
+</html>
